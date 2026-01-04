@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*  for hiding navbar in home page */
+nav:not([class^="hidden"])+main{
+    padding-left: 4rem;
+}

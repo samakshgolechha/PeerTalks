@@ -1,0 +1,10 @@
+Sign UP page ->
+1. display error if pass and cnfm password does not match
+2. if username already exists display it
+3. 
+
+
+
+
+backend - 
+reduce code in urlsToParams function in lib/utils.js
