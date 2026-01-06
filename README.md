@@ -14,7 +14,7 @@ Peer Talks is a real-time chatting application designed for peer-to-peer communi
 First, run the development server:
 
 ```sql
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY 'your_password';
 
 flush privileges;
 ```
