@@ -67,9 +67,10 @@ export default function ChatBox({ chatid }) {
             fetchInitialMessages();
 
             // Initialize Socket.IO connection
-            const socket = io({
-                path: '/socket.io',
-                transports: ['websocket', 'polling']
+            const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+
+            const socket = io(BACKEND_URL, {
+            transports: ['websocket', 'polling']
             });
 
             socketRef.current = socket;
@@ -80,7 +81,7 @@ export default function ChatBox({ chatid }) {
                 setConnectionStatus("connected");
                 
                 // Join the chat room
-                socket.emit("join-chat", chatid);
+                socket.emit("join-chat", { chatId: chatid, username: user });
             });
 
             socket.on("connect_error", (error) => {
