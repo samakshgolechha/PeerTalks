@@ -128,7 +128,86 @@ USE railway;
 -- =========================
 -- USERS
 -- =========================
-CREATE TABLE IF NOT EXISTS users (
+-- CREATE TABLE IF NOT EXISTS users (
+--     username VARCHAR(20) PRIMARY KEY,
+--     password VARCHAR(255),
+--     fname VARCHAR(20),
+--     lname VARCHAR(20),
+--     bio VARCHAR(255),
+--     gender ENUM('Male', 'Female', 'Other'),
+--     DOB VARCHAR(20),
+--     lastLogin DATE,
+--     regDate DATE
+-- );
+
+-- =========================
+-- CHATS
+-- =========================
+-- CREATE TABLE IF NOT EXISTS chats (
+--     chat_id BIGINT PRIMARY KEY,
+--     create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- =========================
+-- CONTACTS
+-- =========================
+-- CREATE TABLE IF NOT EXISTS contact (
+--     username VARCHAR(20),
+--     contactname VARCHAR(20),
+--     chat_id BIGINT,
+--     PRIMARY KEY (username, contactname),
+--     FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
+--     FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+--     FOREIGN KEY (contactname) REFERENCES users(username) ON DELETE CASCADE
+-- );
+
+-- =========================
+-- MESSAGES
+-- =========================
+-- CREATE TABLE IF NOT EXISTS message (
+--     chat_id BIGINT,
+--     sender VARCHAR(20),
+--     content VARCHAR(255),
+--     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     seen BOOLEAN DEFAULT FALSE,
+--     FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
+--     FOREIGN KEY (sender) REFERENCES users(username) ON DELETE CASCADE
+-- );
+
+-- =========================
+-- NOTIFICATIONS
+-- =========================
+-- CREATE TABLE IF NOT EXISTS notifications (
+--     username VARCHAR(20),
+--     senderuser VARCHAR(20),
+--     message VARCHAR(255),
+--     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
+--     FOREIGN KEY (senderuser) REFERENCES users(username) ON DELETE CASCADE
+-- );
+
+-- =========================
+-- FRIEND REQUESTS
+-- =========================
+-- CREATE TABLE IF NOT EXISTS friendrequest (
+--     sender VARCHAR(20),
+--     receiver VARCHAR(20),
+--     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     PRIMARY KEY (sender, receiver),
+--     FOREIGN KEY (sender) REFERENCES users(username) ON DELETE CASCADE,
+--     FOREIGN KEY (receiver) REFERENCES users(username) ON DELETE CASCADE
+-- );
+
+-- Drop the lowercase table
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS friendrequest;
+DROP TABLE IF EXISTS message;
+DROP TABLE IF EXISTS contact;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS chats;
+
+-- Recreate with UPPERCASE
+CREATE TABLE USERS(
     username VARCHAR(20) PRIMARY KEY,
     password VARCHAR(255),
     fname VARCHAR(20),
@@ -140,60 +219,45 @@ CREATE TABLE IF NOT EXISTS users (
     regDate DATE
 );
 
--- =========================
--- CHATS
--- =========================
-CREATE TABLE IF NOT EXISTS chats (
-    chat_id BIGINT PRIMARY KEY,
+CREATE TABLE CHATS(
+    chat_id BIGINT PRIMARY KEY AUTO_INCREMENT,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- =========================
--- CONTACTS
--- =========================
-CREATE TABLE IF NOT EXISTS contact (
+CREATE TABLE CONTACT(
     username VARCHAR(20),
     contactname VARCHAR(20),
     chat_id BIGINT,
     PRIMARY KEY (username, contactname),
-    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
-    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
-    FOREIGN KEY (contactname) REFERENCES users(username) ON DELETE CASCADE
+    FOREIGN KEY(chat_id) REFERENCES CHATS(chat_id) ON DELETE CASCADE,
+    FOREIGN KEY(username) REFERENCES USERS(username) ON DELETE CASCADE,
+    FOREIGN KEY(contactname) REFERENCES USERS(username) ON DELETE CASCADE
 );
 
--- =========================
--- MESSAGES
--- =========================
-CREATE TABLE IF NOT EXISTS message (
+CREATE TABLE MESSAGE(
     chat_id BIGINT,
     sender VARCHAR(20),
     content VARCHAR(255),
     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     seen BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (chat_id) REFERENCES chats(chat_id) ON DELETE CASCADE,
-    FOREIGN KEY (sender) REFERENCES users(username) ON DELETE CASCADE
+    FOREIGN KEY(chat_id) REFERENCES CHATS(chat_id) ON DELETE CASCADE,
+    FOREIGN KEY(sender) REFERENCES USERS(username) ON DELETE CASCADE
 );
 
--- =========================
--- NOTIFICATIONS
--- =========================
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE NOTIFICATIONS(
     username VARCHAR(20),
     senderuser VARCHAR(20),
     message VARCHAR(255),
     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE,
-    FOREIGN KEY (senderuser) REFERENCES users(username) ON DELETE CASCADE
+    FOREIGN KEY(username) REFERENCES USERS(username) ON DELETE CASCADE,
+    FOREIGN KEY(senderuser) REFERENCES USERS(username) ON DELETE CASCADE
 );
 
--- =========================
--- FRIEND REQUESTS
--- =========================
-CREATE TABLE IF NOT EXISTS friendrequest (
+CREATE TABLE FRIENDREQUEST(
     sender VARCHAR(20),
     receiver VARCHAR(20),
     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (sender, receiver),
-    FOREIGN KEY (sender) REFERENCES users(username) ON DELETE CASCADE,
-    FOREIGN KEY (receiver) REFERENCES users(username) ON DELETE CASCADE
+    PRIMARY KEY(sender, receiver),
+    FOREIGN KEY(sender) REFERENCES USERS(username) ON DELETE CASCADE,
+    FOREIGN KEY(receiver) REFERENCES USERS(username) ON DELETE CASCADE
 );
