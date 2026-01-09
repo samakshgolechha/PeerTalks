@@ -75,7 +75,7 @@ Create `.env` files in both `frontend/` and `backend/` directories.
 ```env
 NEXT_PUBLIC_SOCKET_URL="http://localhost:3001"
 DB_HOST="localhost"
-DB_PORT="3306"
+DB_PORT="31434"
 DB_USER="root"
 DB_PASSWORD="your-password"
 DB_NAME="PeerTalks"
