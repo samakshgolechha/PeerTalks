@@ -8,9 +8,10 @@ PeerTalks is a modern real-time messaging application that enables users to conn
 
 - **User Authentication:** Secure sign-up and login system with session management.
 - **Real-Time Messaging:** Instant message delivery powered by Socket.IO.
-- **Friend System:** Send and accept friend requests to build your network.
+- **Peer-to-Peer Communication:** Direct communication between peers for a more personal experience.
 - **Live Notifications:** Get notified of new messages and friend requests in real-time.
 - **Chat History:** Persistent message storage for all conversations.
+- **User-Friendly Interface:** Intuitive design for easy navigation and a pleasant user experience.
 
 ---
 
