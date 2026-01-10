@@ -18,8 +18,8 @@ PeerTalks is a modern real-time messaging application that enables users to conn
 ## Project Structure
 ```
 PeerTalks/
+├── Frontend/     # Next.js client application
 ├── backend/      # Express + Socket.IO server
-├── frontend/     # Next.js client application
 ```
 
 ---
