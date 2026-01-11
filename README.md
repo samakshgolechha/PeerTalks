@@ -75,11 +75,11 @@ Create `.env` files in both `frontend/` and `backend/` directories.
 #### Frontend/.env.example
 ```env
 NEXT_PUBLIC_SOCKET_URL="http://localhost:3001"
-DB_HOST="localhost"
-DB_PORT="31434"
-DB_USER="root"
-DB_PASSWORD="your-password"
-DB_NAME="PeerTalks"
+DB_HOST=" "
+DB_PORT=" "
+DB_USER=" "
+DB_PASSWORD="your_password"
+DB_NAME=" "
 ```
 
 #### Backend/.env.example
