@@ -10,10 +10,13 @@ export default function ChatBox({ chatid }) {
     const [error, setError] = useState(null);
     const [sending, setSending] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState("connecting");
+    const [typingUser, setTypingUser] = useState(null);
     
     const chatboxRef = useRef();
     const textboxRef = useRef();
     const socketRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
+    const debounceTimeout = useRef(null);
 
     // Scroll to bottom helper
     const scrollToBottom = useCallback(() => {
@@ -70,7 +73,7 @@ export default function ChatBox({ chatid }) {
             const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
             const socket = io(BACKEND_URL, {
-            transports: ['websocket', 'polling']
+                transports: ['websocket', 'polling']
             });
 
             socketRef.current = socket;
@@ -109,13 +112,60 @@ export default function ChatBox({ chatid }) {
                 setTimeout(scrollToBottom, 100);
             });
 
+            // Listen for typing indicator
+            socket.on("user-typing", (data) => {
+                const { username: typingUsername, chatId } = data;
+                
+                // Only show if it's this chat and not the current user
+                if (chatId === chatid && typingUsername !== user) {
+                    setTypingUser(typingUsername);
+                    
+                    // Clear after 2 seconds
+                    if (typingTimeoutRef.current) {
+                        clearTimeout(typingTimeoutRef.current);
+                    }
+                    typingTimeoutRef.current = setTimeout(() => {
+                        setTypingUser(null);
+                    }, 2000);
+                }
+            });
+
             // Cleanup on unmount
             return () => {
                 console.log("Cleaning up socket connection");
+                socket.off("receive-message");
+                socket.off("user-typing");
+                if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                }
+                if (debounceTimeout.current) {
+                    clearTimeout(debounceTimeout.current);
+                }
                 socket.disconnect();
             };
         }
     }, [chatid, fetchInitialMessages, scrollToBottom]);
+
+    // Handle typing events with debouncing
+    const handleTyping = () => {
+        if (!socketRef.current?.connected || !username) return;
+        
+        // Clear existing timeout
+        if (debounceTimeout.current) {
+            clearTimeout(debounceTimeout.current);
+        }
+        
+        // Emit typing event
+        socketRef.current.emit("typing", {
+            chatId: chatid,
+            username: username
+        });
+        
+        // Debounce to avoid sending too many events
+        debounceTimeout.current = setTimeout(() => {
+            // Typing stopped
+        }, 1000);
+    };
 
     // Send message via Socket.IO
     const sendMessage = async (event) => {
@@ -154,6 +204,12 @@ export default function ChatBox({ chatid }) {
                     message: messageText,
                     sender: username
                 });
+
+                // Clear typing indicator
+                setTypingUser(null);
+                if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                }
 
                 // Clear input
                 textboxRef.current.value = '';
@@ -275,6 +331,29 @@ export default function ChatBox({ chatid }) {
                             })
                         )}
                     </ul>
+
+                    {/* Typing Indicator */}
+                    {typingUser && (
+                        <div className="flex justify-start pb-3 pt-1">
+                            <div className="bg-white/90 rounded-e-xl rounded-s-md shadow-chat px-4 py-2 text-gray-600 text-sm">
+                                <span className="italic">typing</span>
+                                <span className="inline-flex ml-1 gap-0.5 items-end">
+                                    <span className="text-xl leading-none" style={{ 
+                                        animation: 'smoothBounce 1.4s ease-in-out infinite',
+                                        animationDelay: '0s'
+                                    }}>.</span>
+                                    <span className="text-xl leading-none" style={{ 
+                                        animation: 'smoothBounce 1.4s ease-in-out infinite',
+                                        animationDelay: '0.2s'
+                                    }}>.</span>
+                                    <span className="text-xl leading-none" style={{ 
+                                        animation: 'smoothBounce 1.4s ease-in-out infinite',
+                                        animationDelay: '0.4s'
+                                    }}>.</span>
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -285,6 +364,7 @@ export default function ChatBox({ chatid }) {
                     placeholder="Message"
                     disabled={sending || connectionStatus !== 'connected'}
                     onKeyDown={handleKeyDown}
+                    onChange={handleTyping}
                     className="block w-full py-2 px-4 mx-2 bg-gray-100 transition-colors rounded-lg outline-none focus:text-gray-700 focus:bg-gray-200 disabled:opacity-50"
                     autoComplete="off"
                 />
