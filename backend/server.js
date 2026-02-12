@@ -129,6 +129,8 @@
 //     console.log(`📡 Socket.IO ready for connections`);
 // });
 
+require("dotenv").config();
+
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const express = require("express");
