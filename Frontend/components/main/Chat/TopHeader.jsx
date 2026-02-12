@@ -2,7 +2,7 @@
 import Profilepic from "@/components/Profilepic";
 import ProfileLink from "@/components/utils/ProfileLink";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 
 export default function TopHeader({chatid}) {
@@ -42,18 +42,20 @@ export default function TopHeader({chatid}) {
   };
 
   // Fetch user status
-  const fetchUserStatus = async (username) => {
+  const fetchUserStatus = useCallback(async (username) => {
     try {
       const response = await fetch(`/chat/api/user-status/${username}`);
       const data = await response.json();
       
+      console.log(`Fetched status for ${username}:`, data);
       setIsOnline(data.isOnline);
       setLastSeen(data.lastSeen);
     } catch (error) {
       console.error("Error fetching user status:", error);
     }
-  };
+  }, []);
 
+  // First useEffect: Fetch user data
   useEffect(() => {
     const username = localStorage.getItem("username");
     
@@ -61,17 +63,29 @@ export default function TopHeader({chatid}) {
     axios
       .get(`/chat/api/chatuser?username=${username}&chatid=${chatid}`)
       .then(function (response) {
-        setUser(response.data);
-        console.log(response.data);
+        const userData = response.data;
+        setUser(userData);
+        console.log("User loaded:", userData);
         
-        // Fetch initial status
-        if (response.data.username) {
-          fetchUserStatus(response.data.username);
+        // Fetch initial status AFTER user is set
+        if (userData.username) {
+          fetchUserStatus(userData.username);
         }
       })
       .catch(function (error) {
-        console.log(error);
+        console.log("Error loading user:", error);
       });
+  }, [chatid, fetchUserStatus]);
+
+  // Second useEffect: Setup Socket.IO (only after user is loaded)
+  useEffect(() => {
+    // Don't setup socket until user is loaded
+    if (!user.username) {
+      console.log("Waiting for user to load before setting up socket...");
+      return;
+    }
+
+    console.log("Setting up socket for user:", user.username);
 
     // Setup Socket.IO for real-time status updates
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
@@ -90,37 +104,38 @@ export default function TopHeader({chatid}) {
       }
     });
 
-// Listen for status changes
-socket.on("user-status-changed", (data) => {
-  const { username: statusUsername, isOnline: userIsOnline } = data;
-  
-  console.log("=== STATUS CHANGE EVENT ===");
-  console.log("Event data:", data);
-  console.log("Current user being viewed:", user);
-  console.log("Does it match?", user.username === statusUsername);
-  
-  // Update status if it matches the current user being viewed
-  setUser(currentUser => {
-    if (currentUser.username && statusUsername === currentUser.username) {
-      console.log(`✅ Updating status for ${statusUsername} to ${userIsOnline ? 'online' : 'offline'}`);
-      setIsOnline(userIsOnline);
+    // Listen for status changes
+    socket.on("user-status-changed", (data) => {
+      const { username: statusUsername, isOnline: userIsOnline } = data;
       
-      // If they went offline, fetch their last seen
-      if (!userIsOnline) {
-        fetchUserStatus(statusUsername);
+      console.log("=== STATUS CHANGE EVENT ===");
+      console.log("Event data:", data);
+      console.log("Current user being viewed:", user);
+      console.log("User username:", user?.username);
+      console.log("Status username:", statusUsername);
+      console.log("Does it match?", user?.username === statusUsername);
+      
+      // STRICT CHECK: Only update if user is fully loaded AND usernames match
+      if (user && user.username && statusUsername === user.username) {
+        console.log(`✅ Updating status for ${statusUsername} to ${userIsOnline ? 'online' : 'offline'}`);
+        setIsOnline(userIsOnline);
+        
+        // If they went offline, fetch their last seen
+        if (!userIsOnline) {
+          fetchUserStatus(statusUsername);
+        }
+      } else {
+        console.log(`❌ Not updating - user not loaded or doesn't match`);
+        console.log(`   Current: ${user?.username}, Event: ${statusUsername}`);
       }
-    } else {
-      console.log(`❌ Not updating - current user is ${currentUser.username}, event is for ${statusUsername}`);
-    }
-    return currentUser;
-  });
-});
+    });
 
     return () => {
+      console.log("Cleaning up socket...");
       socket.off("user-status-changed");
       socket.disconnect();
     };
-  }, [chatid]);
+  }, [chatid, user, user.username, fetchUserStatus]);
 
   return (
     <div className="relative flex items-center p-3 border-b border-gray-300 bg-white w-full">

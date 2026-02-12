@@ -123,7 +123,7 @@
 
 -- --alter table users
 -- --drop column pic
-USE railway;
+USE peertalks;
 
 -- =========================
 -- USERS
