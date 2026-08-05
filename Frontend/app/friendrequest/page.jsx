@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { GrClose } from "react-icons/gr";
 import { IoCheckmarkSharp } from "react-icons/io5";
 import { toast } from "react-toastify";
+import { apiUrl } from "@/lib/api";
 
 export default function FriendRequest() {
   const [users, setUsers] = useState([]);
@@ -16,7 +17,7 @@ export default function FriendRequest() {
   useEffect(() => {
     const username = localStorage.getItem("username");
     axios
-      .get(`/friendrequest/api?username=${username}`)
+      .get(apiUrl(`/api/friendrequest?username=${username}`))
       .then(function (response) {
         setUsers(response.data)
       })
@@ -46,7 +47,7 @@ function RequestCard({ user, filterUser }) {
     const username = localStorage.getItem("username");
 
     axios
-      .post(`/friendrequest/api`, {
+      .post(apiUrl("/api/friendrequest"), {
         sender: username,
         receiver: user.username,
         accepted: accepted,

@@ -4,6 +4,7 @@ import { useState } from "react"
 import Profilepic from "@/components/Profilepic";
 import ProfileLink from "@/components/utils/ProfileLink";
 import { toast } from "react-toastify";
+import { apiUrl } from "@/lib/api";
 export default function Search() {
 
     const filterUser = (username) => {
@@ -15,7 +16,7 @@ export default function Search() {
     const submit = (event) => {
         event.preventDefault();
         const search = event.target.search.value;
-        axios.get(`search/api?search=${search}&username=${localStorage.getItem("username")}`)
+        axios.get(apiUrl(`/api/search?search=${search}&username=${localStorage.getItem("username")}`))
             .then(function (response) {
                 if (response.data.users.length == 0) {
                     setFound(true);
@@ -54,7 +55,7 @@ export default function Search() {
 function UserCard({ user, filterUser }) {
 
     const connect = (username) => {
-        axios.post("/search/api", { contactuser: username, username: localStorage.getItem("username") })
+        axios.post(apiUrl("/api/search"), { contactuser: username, username: localStorage.getItem("username") })
             .then(function (response) {
                 if (!response.error) {
                     toast.success("Request Sent!");

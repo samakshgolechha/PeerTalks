@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { io } from "socket.io-client"
+import { apiUrl, API_BASE_URL } from "@/lib/api";
 
 export default function ChatBox({ chatid }) {
     const [messages, setMessages] = useState([]);
@@ -36,7 +37,7 @@ export default function ChatBox({ chatid }) {
             }
 
             const response = await fetch(
-                `/chat/api/messages?chatid=${chatid}&sender=${user}`
+                apiUrl(`/api/chat/messages?chatid=${chatid}&sender=${user}`)
             );
             const data = await response.json();
 
@@ -70,11 +71,12 @@ export default function ChatBox({ chatid }) {
             fetchInitialMessages();
 
             // Initialize Socket.IO connection
-            const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+           const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
-            const socket = io(BACKEND_URL, {
-                transports: ['websocket', 'polling']
-            });
+const socket = io(BACKEND_URL, {
+  transports: ["websocket", "polling"],
+});
 
             socketRef.current = socket;
 
@@ -183,7 +185,7 @@ export default function ChatBox({ chatid }) {
 
         try {
             // Save message to database first
-            const response = await fetch(`/chat/api/messages`, {
+            const response = await fetch(apiUrl("/api/chat/messages"), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

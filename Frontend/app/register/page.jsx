@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThreeDots } from "react-loader-spinner";
+import { apiUrl } from "@/lib/api";
 
 export default function Register() {
   const [errorClient, setErrorClient] = useState(false);
@@ -27,7 +28,7 @@ export default function Register() {
     }
 
     axios
-      .post("register/api", formObject)
+      .post(apiUrl("/api/register"), formObject)
       .then(function (response) {
         console.log(response.data.error)
         if (response.data.error) 

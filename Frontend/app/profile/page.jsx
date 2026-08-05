@@ -3,6 +3,7 @@ import Profilepic from "@/components/Profilepic";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { apiUrl } from "@/lib/api";
 export default function Home() {
   const [user, setUser] = useState({});
   const change = (e) => {
@@ -15,7 +16,7 @@ export default function Home() {
   useEffect(() => {
     const username = localStorage.getItem("username")
     axios
-      .get(`profile/api?username=${username}`)
+      .get(apiUrl(`/api/profile?username=${username}`))
       .then(function (response) {
         setUser(response.data);
       })
@@ -26,7 +27,7 @@ export default function Home() {
 
   const saveUser = (e) => {
     e.preventDefault();
-    axios.post("/register/setprofile/api", {
+    axios.post(apiUrl("/api/register/setprofile"), {
       fname : user.fname,
       lname : user.lname,
       username : user.username,

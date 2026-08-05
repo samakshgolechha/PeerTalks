@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThreeDots } from "react-loader-spinner";
+import { apiUrl } from "@/lib/api";
 export default function Login() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export default function Login() {
     });
 
     axios
-      .get(`login/api?username=${formObject.username}&password=${formObject.password}`)
+      .get(apiUrl(`/api/login?username=${formObject.username}&password=${formObject.password}`))
       .then(function (response) {
         if (response.data.success) {
           localStorage.setItem("username", formObject.username);

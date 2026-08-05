@@ -6,6 +6,7 @@ import DatePicker from "react-datepicker";
 import { useRouter } from "next/navigation";
 import "react-datepicker/dist/react-datepicker.css";
 import { ThreeDots } from "react-loader-spinner";
+import { apiUrl } from "@/lib/api";
 export default function UserProfile() {
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -20,7 +21,7 @@ export default function UserProfile() {
       formObject[key] = value;
     });
     formObject.username=localStorage.getItem("username");
-    axios.post("/register/setprofile/api", formObject)
+    axios.post(apiUrl("/api/register/setprofile"), formObject)
       .then(function (response) {
         if (response.data.error) {
           console.log(response.data.error);

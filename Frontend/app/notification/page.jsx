@@ -5,11 +5,12 @@ import { MdDelete } from "react-icons/md";
 import Profilepic from "@/components/Profilepic";
 import ProfileLink from "@/components/utils/ProfileLink";
 import { toast } from "react-toastify";
+import { apiUrl } from "@/lib/api";
 export default function Notification() {
   useEffect(() => {
     const username = localStorage.getItem("username");
     axios
-      .get(`/notification/api?username=${username}`)
+      .get(apiUrl(`/api/notification?username=${username}`))
       .then(function (response) {
         setNoti(response.data);
         console.log(response.data);
@@ -23,7 +24,7 @@ export default function Notification() {
   const clearNotifications = () => {
     const username = localStorage.getItem("username");
     axios
-      .delete(`/notification/api?username=${username}`)
+      .delete(apiUrl(`/api/notification?username=${username}`))
       .then(function (response) {
         if (!response.error) {
           setNoti([]);

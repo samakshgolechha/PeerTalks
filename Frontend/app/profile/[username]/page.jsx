@@ -2,12 +2,13 @@
 import Profilepic from "@/components/Profilepic";
 import axios from "axios";
 import { useState } from "react";
+import { apiUrl } from "@/lib/api";
 
 export default function Profile({ params }) {
   const { username } = params;
   const [user, setUser] = useState({});
   axios
-    .get(`/profile/api?username=${username}`)
+    .get(apiUrl(`/api/profile?username=${username}`))
     .then(function (response) {
       if (setUser)
         setUser(response.data);

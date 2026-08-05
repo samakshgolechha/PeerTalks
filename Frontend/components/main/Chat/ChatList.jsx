@@ -4,6 +4,7 @@ import axios from "axios";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import ChatLabel from "./ChatLabel";
+import { apiUrl } from "@/lib/api";
 
 export default function ChatList() {
     const pathname = usePathname();
@@ -11,7 +12,7 @@ export default function ChatList() {
     useEffect(() => {
         const { username, password } = getUserDetails();
 
-        axios.get(`/chat/api?username=${username}&password=${password}`)
+        axios.get(apiUrl(`/api/chat?username=${username}&password=${password}`))
             .then(function (response) {
                 setUsers(response.data.users)
             }).catch(function (error) {
