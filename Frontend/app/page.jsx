@@ -1,12 +1,12 @@
-import Desc from "@/components/LandingPage/Desc";
-import Features from "@/components/LandingPage/Features";
-import Intro from "@/components/LandingPage/Intro";
+import Hero from "@/components/LandingPage/Hero";
+// import Desc from "@/components/LandingPage/Desc";
+// import Features from "@/components/LandingPage/Features";
+
 export default function Home() {
   return (
     <>
-    <Intro/>
-    <Desc/>
-    <Features/>
+      <Hero />
+      {/* More sections coming soon */}
     </>
   );
 }
