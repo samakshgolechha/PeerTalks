@@ -37,6 +37,8 @@ export default function CTAButton({
           boxShadow: isPrimary
             ? "0px 1px 1px -0.75px rgba(196, 196, 196, 0.22), 0px 1.7px 1.7px -1.5px rgba(196, 196, 196, 0.21), 0px 3.7px 3.7px -2.25px rgba(196, 196, 196, 0.2), 0px 8.3px 8.3px -3px rgba(196, 196, 196, 0.17), 0px 21px 21px -3.75px rgba(196, 196, 196, 0.08)"
             : "none",
+          backdropFilter: isPrimary ? "none" : "blur(12px)",
+          WebkitBackdropFilter: isPrimary ? "none" : "blur(12px)",
         }}
       >
         {/* Button label */}
