@@ -42,7 +42,7 @@ const links = [
     }
 ]
 
-const excludedPaths = ["/","/register","/login","/register/setprofile"]
+const excludedPaths = ["/", "/register", "/login", "/register/setprofile", "/auth"];
 
 export default function NavBar() {
     const pathname = usePathname();
@@ -65,7 +65,7 @@ export default function NavBar() {
             })}
 
         </div>
-        <Link href="/login"
+        <Link href="/auth"
             onClick={logout}
         className={`p-2 text-primary-400 bg-primary-50 hover:text-primary-600 hover:bg-primary-100 transition-colors duration-200 rounded-full focus:outline-none mx-auto w-fit`}>
             <span className="sr-only">logout</span>

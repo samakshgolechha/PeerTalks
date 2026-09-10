@@ -2,9 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/*  for hiding navbar in home page */
+/* for hiding navbar in home page */
 nav:not([class^="hidden"])+main{
     padding-left: 4rem;
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
 }
 
 @keyframes smoothBounce {

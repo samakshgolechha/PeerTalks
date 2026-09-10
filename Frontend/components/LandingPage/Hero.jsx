@@ -160,8 +160,7 @@ export default function Hero() {
           transition={{ delay: 1.1 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-3"
         >
-          <CTAButton label="Get Started" href="/register" variant="primary" />
-          <CTAButton label="Log In" href="/login" variant="ghost" />
+          <CTAButton label="Get Started" href="/auth" variant="primary" />
         </motion.div>
       </div>
 
