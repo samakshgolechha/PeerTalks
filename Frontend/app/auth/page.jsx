@@ -61,6 +61,13 @@ export default function AuthPage() {
     setSuccessMsg("");
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setFormData({
+      username: "",
+      email: "",
+      phone: "",
+      password: "",
+      cpassword: "",
+    });
   };
 
   // ── Handle Submit ──
@@ -83,18 +90,16 @@ export default function AuthPage() {
 
         let res;
         try {
-          res = await axios.get(
-            apiUrl(`/api/login?username=${encodeURIComponent(identifier)}&password=${encodeURIComponent(password)}`)
-          );
+          res = await axios.post(apiUrl("/api/login"), { identifier, password });
         } catch (err) {
-          res = await axios.get(
-            `/login/api?username=${encodeURIComponent(identifier)}&password=${encodeURIComponent(password)}`
-          );
+          setErrorMsg(err.response?.data?.message || "Login failed. Please check your connection and try again.");
+          setLoading(false);
+          return;
         }
 
         if (res.data && res.data.success) {
-          localStorage.setItem("username", identifier);
-          localStorage.setItem("password", password);
+          localStorage.setItem("username", res.data.username || identifier);
+          localStorage.setItem("password", password); // kept for legacy chat auth compat
           router.push("/chat");
         } else {
           setErrorMsg(res.data?.message || "Invalid username or password. Please try again.");
@@ -131,12 +136,10 @@ export default function AuthPage() {
             password,
           });
         } catch (err) {
-          res = await axios.post("/register/api", {
-            username: username.trim(),
-            email: email.trim().toLowerCase(),
-            phone: formattedPhone,
-            password,
-          });
+          console.error("Registration Error details:", err);
+          setErrorMsg(err.response?.data?.message || `Connection error: ${err.message}. Please ensure backend is reachable.`);
+          setLoading(false);
+          return;
         }
 
         if (res.data && res.data.success) {

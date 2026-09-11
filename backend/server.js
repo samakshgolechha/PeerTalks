@@ -4,12 +4,20 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
+const { body, validationResult } = require("express-validator");
+const { parsePhoneNumber } = require("libphonenumber-js");
 const { executeQuery } = require("./lib/db");
+
+const BCRYPT_SALT_ROUNDS = 12;
 
 const app = express();
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: function(origin, callback) {
+        // Echo the origin back to support credentials without hardcoding all possible local IPs
+        callback(null, origin || true);
+    },
     credentials: true
 }));
 
@@ -35,6 +43,7 @@ app.get("/", (req, res) => {
     });
 });
 
+// ── Legacy GET /api/login (kept for backward compat with existing chat pages) ──
 app.get("/api/login", async (req, res) => {
     const { username, password } = req.query;
     const users = await executeQuery(
@@ -44,25 +53,191 @@ app.get("/api/login", async (req, res) => {
 
     if (users.error) return res.json(users);
 
+    if (users.length === 0) {
+        return res.json({ success: false, message: "Invalid credentials." });
+    }
+
+    const user = users[0];
+
+    // If user has a bcrypt hash, verify against it
+    if (user.password_hash) {
+        try {
+            const match = await bcrypt.compare(password, user.password_hash);
+            return res.json({ success: match, message: match ? undefined : "Invalid credentials." });
+        } catch (err) {
+            return res.json({ success: false, message: "Authentication error." });
+        }
+    }
+
+    // Fallback: legacy plaintext comparison
     res.json({
-        success: users.length > 0 && users[0].password === password
+        success: user.password === password,
+        message: user.password === password ? undefined : "Invalid credentials."
     });
 });
 
-app.post("/api/register", async (req, res) => {
-    const { username, password } = req.body;
-    const response = await executeQuery(
-        "INSERT INTO USERS (username, password, regDate) VALUES (?, ?, CURDATE())",
-        [username, password]
-    );
+// ── NEW POST /api/login (used by the /auth page) ──
+app.post("/api/login", async (req, res) => {
+    try {
+        const { identifier, password } = req.body;
 
-    if (!response.error) {
-        response.username = username;
-        response.password = password;
+        if (!identifier || !password) {
+            return res.status(400).json({ success: false, message: "Username/email and password are required." });
+        }
+
+        // Look up by username OR email
+        const users = await executeQuery(
+            "SELECT * FROM USERS WHERE username = ? OR email = ?",
+            [identifier.trim(), identifier.trim().toLowerCase()]
+        );
+
+        if (users.error) {
+            return res.status(500).json({ success: false, message: "Server error. Please try again." });
+        }
+
+        if (users.length === 0) {
+            return res.json({ success: false, message: "Invalid username/email or password." });
+        }
+
+        const user = users[0];
+
+        // Check if account is locked
+        if (user.account_locked_until && new Date(user.account_locked_until) > new Date()) {
+            const minutesLeft = Math.ceil((new Date(user.account_locked_until) - new Date()) / 60000);
+            return res.json({
+                success: false,
+                message: `Account locked due to too many failed attempts. Try again in ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}.`
+            });
+        }
+
+        let passwordValid = false;
+
+        // Check bcrypt hash first (new accounts)
+        if (user.password_hash) {
+            passwordValid = await bcrypt.compare(password, user.password_hash);
+        } else if (user.password) {
+            // Backward compat: legacy plaintext comparison
+            passwordValid = user.password === password;
+
+            // Auto-migrate: hash the plaintext password for this legacy user
+            if (passwordValid) {
+                const hash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+                await executeQuery(
+                    "UPDATE USERS SET password_hash = ? WHERE username = ?",
+                    [hash, user.username]
+                );
+            }
+        }
+
+        if (!passwordValid) {
+            // Increment failed attempts
+            const newAttempts = (user.failed_login_attempts || 0) + 1;
+            const lockUntil = newAttempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+
+            await executeQuery(
+                "UPDATE USERS SET failed_login_attempts = ?, account_locked_until = ? WHERE username = ?",
+                [newAttempts, lockUntil, user.username]
+            );
+
+            if (newAttempts >= 5) {
+                return res.json({
+                    success: false,
+                    message: "Too many failed attempts. Account locked for 15 minutes."
+                });
+            }
+
+            return res.json({ success: false, message: "Invalid username/email or password." });
+        }
+
+        // Success — reset failed attempts
+        await executeQuery(
+            "UPDATE USERS SET failed_login_attempts = 0, account_locked_until = NULL, lastLogin = CURDATE() WHERE username = ?",
+            [user.username]
+        );
+
+        return res.json({ success: true, username: user.username });
+    } catch (error) {
+        console.error("POST /api/login error:", error);
+        return res.status(500).json({ success: false, message: "Server error. Please try again." });
     }
-
-    res.json(response);
 });
+
+// ── NEW POST /api/register (bcrypt + validation) ──
+app.post(
+    "/api/register",
+    [
+        body("username")
+            .trim()
+            .isLength({ min: 3, max: 20 })
+            .withMessage("Username must be 3-20 characters.")
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage("Username can only contain letters, numbers, and underscores."),
+        body("email")
+            .trim()
+            .isEmail()
+            .withMessage("Please provide a valid email address.")
+            .normalizeEmail(),
+        body("password")
+            .isLength({ min: 6 })
+            .withMessage("Password must be at least 6 characters."),
+        body("phone")
+            .trim()
+            .notEmpty()
+            .withMessage("Phone number is required."),
+    ],
+    async (req, res) => {
+        try {
+            // Validation errors
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                const firstError = errors.array()[0];
+                return res.status(400).json({ success: false, message: firstError.msg });
+            }
+
+            const { username, email, phone, password } = req.body;
+
+            // Validate phone number with libphonenumber-js
+            try {
+                // Try parsing as-is (may include country code like +91 1234567890)
+                const phoneNumber = parsePhoneNumber(phone, "IN"); // default region IN
+                if (!phoneNumber || !phoneNumber.isValid()) {
+                    return res.status(400).json({ success: false, message: "Please provide a valid phone number." });
+                }
+            } catch (phoneErr) {
+                return res.status(400).json({ success: false, message: "Please provide a valid phone number." });
+            }
+
+            // Hash password
+            const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
+            // Insert user (password column set to NULL for new users, only password_hash is used)
+            const response = await executeQuery(
+                `INSERT INTO USERS (username, email, phone, password_hash, auth_provider, regDate)
+                 VALUES (?, ?, ?, ?, 'local', CURDATE())`,
+                [username.trim(), email.trim().toLowerCase(), phone.trim(), passwordHash]
+            );
+
+            if (response.error) {
+                // Handle duplicate entry errors
+                if (response.error.includes("ER_DUP_ENTRY") || response.error.includes("Duplicate entry")) {
+                    if (response.error.includes("username") || response.error.includes("PRIMARY")) {
+                        return res.status(409).json({ success: false, message: "Username already taken. Please choose another." });
+                    }
+                    if (response.error.includes("email")) {
+                        return res.status(409).json({ success: false, message: "Email already registered. Try signing in instead." });
+                    }
+                    return res.status(409).json({ success: false, message: "An account with these details already exists." });
+                }
+                return res.status(500).json({ success: false, message: "Registration failed. Please try again." });
+            }
+
+            return res.json({ success: true, username: username.trim() });
+        } catch (error) {
+            console.error("POST /api/register error:", error);
+            return res.status(500).json({ success: false, message: "Server error. Please try again." });
+        }
+    }
+);
 
 app.post("/api/register/setprofile", async (req, res) => {
     const { fname, lname, gender, bio, dob, username, password } = req.body;
@@ -96,12 +271,23 @@ app.get("/api/profile", async (req, res) => {
 app.get("/api/chat", async (req, res) => {
     const { username, password } = req.query;
     const authUsers = await executeQuery(
-        "SELECT * FROM USERS WHERE USERNAME = ? AND PASSWORD = ?",
-        [username, password]
+        "SELECT * FROM USERS WHERE USERNAME = ?",
+        [username]
     );
 
     if (authUsers.error) return res.json(authUsers);
     if (authUsers.length === 0) return res.json({ success: false });
+
+    const user = authUsers[0];
+    // Backward compatibility: check raw password or bcrypt
+    let isMatch = false;
+    if (user.password.startsWith("$2b$")) {
+        isMatch = await bcrypt.compare(password, user.password);
+    } else {
+        isMatch = (password === user.password);
+    }
+
+    if (!isMatch) return res.json({ success: false });
 
     const users = await executeQuery(
         `SELECT *

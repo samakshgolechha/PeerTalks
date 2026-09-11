@@ -22,7 +22,7 @@ export default function ChatList() {
 
     return <>
         <ul className="overflow-auto">
-            {users.map((elem, key) => {
+            {(users || []).map((elem, key) => {
                 return <li key={key}>
                     <ChatLabel user={elem} active = {elem.chat_id == pathname.split('/chat/')[1]} key={elem.username} />
                 </li>

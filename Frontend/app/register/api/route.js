@@ -6,11 +6,8 @@ export async function POST(req, res) {
 
     const response = await executeQuery({
         query: `INSERT INTO USERS (username, password, regDate ) 
-        VALUES(
-            "${body.username}",
-            "${body.password}",
-            curdate()
-            )`
+        VALUES(?, ?, curdate())`,
+        values: [body.username, body.password]
     });
     
     if(!response.error){

@@ -44,7 +44,8 @@ export function urltoParams(url) {
 export async function authenticate(user,pass)
 {
   const response = await executeQuery({
-    query:`SELECT * FROM USERS WHERE USERNAME="${user}" AND PASSWORD="${pass}"`
+    query:`SELECT * FROM USERS WHERE USERNAME = ? AND PASSWORD = ?`,
+    values: [user, pass]
   }
   )
   return response && response.length > 0

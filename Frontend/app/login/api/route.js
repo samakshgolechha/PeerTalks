@@ -6,7 +6,8 @@ export async function GET(req, res) {
     const {username, password} = urltoParams(req.url)
 
     const response = await executeQuery({
-        query: `SELECT * FROM USERS WHERE username = "${username}"`
+        query: `SELECT * FROM USERS WHERE username = ?`,
+        values: [username]
     });
     
     if(response && response.length > 0 && response[0].password == password){
