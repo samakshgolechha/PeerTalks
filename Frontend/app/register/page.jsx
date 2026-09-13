@@ -30,19 +30,18 @@ export default function Register() {
     axios
       .post(apiUrl("/api/register"), formObject)
       .then(function (response) {
-        console.log(response.data.error)
-        if (response.data.error) 
-        {
-          setErrorServer(true);
-        } else {
+        if (response.data.success) {
           localStorage.setItem("username", response.data.username);
-          localStorage.setItem("password", response.data.password);
+          localStorage.setItem("password", formObject.password);
           setLoading(true);
           router.push("register/setprofile");
+        } else {
+          setErrorServer(true);
         }
       })
       .catch(function (error) {
         console.log(error);
+        setErrorServer(true);
       })
       .finally(function () {
         setLoading(false);

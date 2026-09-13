@@ -14,7 +14,7 @@ const BCRYPT_SALT_ROUNDS = 12;
 const app = express();
 
 app.use(cors({
-    origin: function(origin, callback) {
+    origin: function (origin, callback) {
         // Echo the origin back to support credentials without hardcoding all possible local IPs
         callback(null, origin || true);
     },
@@ -79,7 +79,8 @@ app.get("/api/login", async (req, res) => {
 // ── NEW POST /api/login (used by the /auth page) ──
 app.post("/api/login", async (req, res) => {
     try {
-        const { identifier, password } = req.body;
+        const identifier = req.body.identifier || req.body.username;
+        const password = req.body.password;
 
         if (!identifier || !password) {
             return res.status(400).json({ success: false, message: "Username/email and password are required." });
@@ -151,7 +152,7 @@ app.post("/api/login", async (req, res) => {
 
         // Success — reset failed attempts
         await executeQuery(
-            "UPDATE USERS SET failed_login_attempts = 0, account_locked_until = NULL, lastLogin = CURDATE() WHERE username = ?",
+            "UPDATE USERS SET failed_login_attempts = 0, account_locked_until = NULL, lastLogin = CURRENT_DATE WHERE username = ?",
             [user.username]
         );
 
@@ -213,17 +214,18 @@ app.post(
             // Insert user (password column set to NULL for new users, only password_hash is used)
             const response = await executeQuery(
                 `INSERT INTO USERS (username, email, phone, password_hash, auth_provider, regDate)
-                 VALUES (?, ?, ?, ?, 'local', CURDATE())`,
+                 VALUES (?, ?, ?, ?, 'local', CURRENT_DATE)`,
                 [username.trim(), email.trim().toLowerCase(), phone.trim(), passwordHash]
             );
 
             if (response.error) {
-                // Handle duplicate entry errors
-                if (response.error.includes("ER_DUP_ENTRY") || response.error.includes("Duplicate entry")) {
-                    if (response.error.includes("username") || response.error.includes("PRIMARY")) {
+                // Handle duplicate entry errors (MySQL and PostgreSQL)
+                const errStr = String(response.error).toLowerCase();
+                if (errStr.includes("er_dup_entry") || errStr.includes("duplicate") || errStr.includes("unique constraint")) {
+                    if (errStr.includes("username") || errStr.includes("primary") || errStr.includes("users_pkey")) {
                         return res.status(409).json({ success: false, message: "Username already taken. Please choose another." });
                     }
-                    if (response.error.includes("email")) {
+                    if (errStr.includes("email") || errStr.includes("users_email_key")) {
                         return res.status(409).json({ success: false, message: "Email already registered. Try signing in instead." });
                     }
                     return res.status(409).json({ success: false, message: "An account with these details already exists." });
@@ -269,35 +271,39 @@ app.get("/api/profile", async (req, res) => {
 });
 
 app.get("/api/chat", async (req, res) => {
-    const { username, password } = req.query;
+    const { username } = req.query;
+    if (!username) {
+        return res.status(400).json({ success: false, message: "Username is required." });
+    }
+
     const authUsers = await executeQuery(
-        "SELECT * FROM USERS WHERE USERNAME = ?",
+        "SELECT username FROM USERS WHERE USERNAME = ?",
         [username]
     );
 
-    if (authUsers.error) return res.json(authUsers);
-    if (authUsers.length === 0) return res.json({ success: false });
-
-    const user = authUsers[0];
-    // Backward compatibility: check raw password or bcrypt
-    let isMatch = false;
-    if (user.password.startsWith("$2b$")) {
-        isMatch = await bcrypt.compare(password, user.password);
-    } else {
-        isMatch = (password === user.password);
+    if (authUsers.error) return res.status(500).json(authUsers);
+    if (!authUsers || authUsers.length === 0) {
+        return res.json({ success: false, users: [] });
     }
 
-    if (!isMatch) return res.json({ success: false });
-
     const users = await executeQuery(
-        `SELECT *
+        `SELECT 
+            U.username,
+            U.fname,
+            U.lname,
+            U.gender,
+            U.bio,
+            C.chat_id,
+            C.contactname
          FROM USERS U
          JOIN CONTACT C ON U.USERNAME = C.CONTACTNAME
          WHERE C.USERNAME = ?`,
         [username]
     );
 
-    res.json({ users });
+    if (users.error) return res.status(500).json(users);
+
+    res.json({ success: true, users: users || [] });
 });
 
 app.get("/api/chat/chatuser", async (req, res) => {
@@ -319,7 +325,7 @@ app.get("/api/chat/chatuser", async (req, res) => {
 app.get("/api/chat/messages", async (req, res) => {
     const { chatid, sender } = req.query;
     const messages = await executeQuery(
-        `SELECT *, IF(SENDER = ?, true, false) AS is_sender
+        `SELECT *, CASE WHEN SENDER = ? THEN true ELSE false END AS is_sender
          FROM MESSAGE
          WHERE CHAT_ID = ?
          ORDER BY time ASC`,
@@ -334,7 +340,7 @@ app.get("/api/chat/messages", async (req, res) => {
 app.post("/api/chat/messages", async (req, res) => {
     const { message, chatid, sender } = req.body;
     const response = await executeQuery(
-        "INSERT INTO MESSAGE VALUES (?, ?, ?, NOW(), false)",
+        "INSERT INTO MESSAGE (chat_id, sender, content, time, seen) VALUES (?, ?, ?, NOW(), false)",
         [chatid, sender, message]
     );
 
@@ -375,24 +381,30 @@ app.get("/api/search", async (req, res) => {
     const users = await executeQuery(
         `SELECT *
          FROM USERS
-         WHERE USERNAME LIKE ?
+         WHERE USERNAME ILIKE ?
            AND USERNAME <> ?
            AND USERNAME NOT IN (
                SELECT CONTACTNAME FROM CONTACT WHERE USERNAME = ?
            )
            AND USERNAME NOT IN (
+               SELECT USERNAME FROM CONTACT WHERE CONTACTNAME = ?
+           )
+           AND USERNAME NOT IN (
                SELECT RECEIVER FROM FRIENDREQUEST WHERE SENDER = ?
+           )
+           AND USERNAME NOT IN (
+               SELECT SENDER FROM FRIENDREQUEST WHERE RECEIVER = ?
            )`,
-        [`%${search || ""}%`, username, username, username]
+        [`%${search || ""}%`, username, username, username, username, username]
     );
 
-    res.json({ users });
+    res.json({ users: users || [] });
 });
 
 app.post("/api/search", async (req, res) => {
     const { username, contactuser } = req.body;
     const response = await executeQuery(
-        "INSERT INTO FRIENDREQUEST VALUES (?, ?, NOW())",
+        "INSERT INTO FRIENDREQUEST (sender, receiver, time) VALUES (?, ?, NOW())",
         [username, contactuser]
     );
 
@@ -430,19 +442,19 @@ app.post("/api/friendrequest", async (req, res) => {
         : "declined Your Friend Request";
 
     await executeQuery(
-        "INSERT INTO NOTIFICATIONS VALUES (?, ?, ?, NOW())",
+        "INSERT INTO NOTIFICATIONS (username, senderuser, message, time) VALUES (?, ?, ?, NOW())",
         [receiver, sender, msg]
     );
 
     if (!accepted) return res.json({ success: true });
 
     const chat = await executeQuery(
-        "INSERT INTO CHATS (create_time) VALUES (NOW())"
+        "INSERT INTO CHATS (create_time) VALUES (NOW()) RETURNING chat_id"
     );
 
     if (chat.error) return res.json(chat);
 
-    const chatId = chat.insertId;
+    const chatId = chat.insertId || (chat[0] && chat[0].chat_id);
     const contacts = await executeQuery(
         "INSERT INTO CONTACT VALUES (?, ?, ?), (?, ?, ?)",
         [receiver, sender, chatId, sender, receiver, chatId]
@@ -481,7 +493,9 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
     cors: {
-        origin: process.env.FRONTEND_URL || "*",
+        origin: function (origin, callback) {
+            callback(null, origin || true);
+        },
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -551,6 +565,10 @@ io.on("connection", (socket) => {
         socket.to(data.chatId).emit("user-typing", data);
     });
 
+    socket.on("stop-typing", (data) => {
+        socket.to(data.chatId).emit("user-stop-typing", data);
+    });
+
     socket.on("disconnect", async () => {
         console.log("User disconnected:", socket.id);
 
@@ -584,7 +602,7 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Backend server running on port ${PORT}`);
     console.log("📡 Socket.IO ready for connections");
 });

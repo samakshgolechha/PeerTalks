@@ -1,4 +1,4 @@
-import executeQuery from "./db";
+// import executeQuery from "./db";
 
 export function urltoParams(url) {
   var queryString = url.split("?")[1]
@@ -41,13 +41,13 @@ export function urltoParams(url) {
   return obj;
 }
 
-export async function authenticate(user,pass)
-{
-  const response = await executeQuery({
-    query:`SELECT * FROM USERS WHERE USERNAME = ? AND PASSWORD = ?`,
-    values: [user, pass]
-  }
-  )
-  return response && response.length > 0
-}
+// export async function authenticate(user,pass)
+// {
+//   const response = await executeQuery({
+//     query:`SELECT * FROM USERS WHERE USERNAME = ? AND PASSWORD = ?`,
+//     values: [user, pass]
+//   }
+//   )
+//   return response && response.length > 0
+// }
 

@@ -18,10 +18,11 @@ export default function Search() {
         const search = event.target.search.value;
         axios.get(apiUrl(`/api/search?search=${search}&username=${localStorage.getItem("username")}`))
             .then(function (response) {
-                if (response.data.users.length == 0) {
+                const usersList = response.data?.users || [];
+                if (usersList.length === 0) {
                     setFound(true);
                 }
-                setUsers(response.data.users)
+                setUsers(usersList);
             }).catch(function (error) {
                 console.log(error);
             })
@@ -57,12 +58,15 @@ function UserCard({ user, filterUser }) {
     const connect = (username) => {
         axios.post(apiUrl("/api/search"), { contactuser: username, username: localStorage.getItem("username") })
             .then(function (response) {
-                if (!response.error) {
+                if (!response.data.error) {
                     toast.success("Request Sent!");
                     filterUser(username);
+                } else {
+                    toast.error("Error: " + response.data.error);
                 }
             }).catch(
                 function (error) {
+                    toast.error("Network error");
                     console.log(error)
                 }
             );

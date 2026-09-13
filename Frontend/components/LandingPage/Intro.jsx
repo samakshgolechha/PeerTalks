@@ -73,13 +73,15 @@ import intro from "public/image/homebg.png";
 import logo from "public/image/logo.png";
 import { useEffect } from "react";
 
+import { apiUrl } from "@/lib/api";
+
 export default function Intro() {
   const router = useRouter();
   useEffect(() => {
     const username = localStorage.getItem("username");
     const password = localStorage.getItem("password");
     axios
-      .get(`/login/api?username=${username}&password=${password}`)
+      .post(apiUrl("/api/login"), { username, password })
       .then(function (response) {
         if (response.data.success) {
           router.push("/chat");

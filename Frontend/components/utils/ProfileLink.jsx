@@ -7,11 +7,7 @@ export default function ProfileLink({ fname, lname, username, className }) {
         onClick={() => router.push(`/profile/${username}`)}
     >
         <span>
-            {fname}
-        </span>
-        {" "}
-        <span>
-            {lname}
+            {fname ? `${fname} ${lname || ''}` : username}
         </span>
     </span>
 }

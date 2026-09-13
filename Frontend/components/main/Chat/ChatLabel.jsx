@@ -8,7 +8,7 @@ export default function ChatLabel({user, active}){
     <div className="w-full pb-2">
         <div className="flex justify-between">
             <span className="block ml-2 font-semibold text-gray-600 capitalize truncate">
-                {user.fname} {user.lname}
+                {user.fname ? `${user.fname} ${user.lname || ''}` : user.username}
             </span>
         </div>
     </div>

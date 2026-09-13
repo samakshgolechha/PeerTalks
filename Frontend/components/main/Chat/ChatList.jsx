@@ -10,21 +10,22 @@ export default function ChatList() {
     const pathname = usePathname();
     const [users, setUsers] = useState([]);
     useEffect(() => {
-        const { username, password } = getUserDetails();
+        const { username } = getUserDetails();
+        if (!username) return;
 
-        axios.get(apiUrl(`/api/chat?username=${username}&password=${password}`))
+        axios.get(apiUrl(`/api/chat?username=${username}`))
             .then(function (response) {
-                setUsers(response.data.users)
+                setUsers(response.data?.users || []);
             }).catch(function (error) {
-                console.log(error);
-            })
+                console.log("Error loading chats:", error);
+            });
     }, []);
 
     return <>
         <ul className="overflow-auto">
             {(users || []).map((elem, key) => {
-                return <li key={key}>
-                    <ChatLabel user={elem} active = {elem.chat_id == pathname.split('/chat/')[1]} key={elem.username} />
+                return <li key={elem.chat_id || elem.username || key}>
+                    <ChatLabel user={elem} active={elem.chat_id == pathname.split('/chat/')[1]} />
                 </li>
             })}
         </ul>

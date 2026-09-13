@@ -53,14 +53,16 @@ function RequestCard({ user, filterUser }) {
         accepted: accepted,
       })
       .then(function (response) {
-        if (!response.error) {
+        if (!response.data.error) {
           filterUser(user.username)
-          if(accepted)
+          if (accepted)
             toast.success(`Connected to ${user.username}`);
           else
             toast.error("Declined Request");
+        } else {
+          console.error(response.data.error);
+          toast.error("Error: " + (response.data.error.message || response.data.error));
         }
-        else console.log(response.error)
       })
       .catch(function (error) {
         console.log(error);
@@ -68,21 +70,21 @@ function RequestCard({ user, filterUser }) {
   }
   return <div className="w-full grid items-center grid-cols-5 bg-white rounded-lg shadow-lg mx-auto p-4">
     <div>
-      <Profilepic gender = {user.gender} className="w-12 h-12 rounded-full border border-gray-100 shadow-sm"  />
-   </div>
+      <Profilepic gender={user.gender} className="w-12 h-12 rounded-full border border-gray-100 shadow-sm" />
+    </div>
     <div className="col-span-3">
-    <ProfileLink fname = {user.fname} lname = {user.lname} username = {user.username} className="font-semibold text-gray-800" />
-        <span className="text-gray-400"> wants to be your friend</span>
+      <ProfileLink fname={user.fname} lname={user.lname} username={user.username} className="font-semibold text-gray-800" />
+      <span className="text-gray-400"> wants to be your friend</span>
     </div>
     <div className="font-semibold flex gap-x-3 mt-3">
-        <button onClick={() => submit(true)} className="text-green-500 uppercase border-2 border-solid border-green-600 hover:bg-green-600 hover:text-white transition-colors duration-200 font-medium text-sm rounded-full p-2">
+      <button onClick={() => submit(true)} className="text-green-500 uppercase border-2 border-solid border-green-600 hover:bg-green-600 hover:text-white transition-colors duration-200 font-medium text-sm rounded-full p-2">
         <IoCheckmarkSharp />
-        </button>
-        <button onClick={() => submit(false)} className="text-red-500 uppercase border-2 border-solid border-red-600 hover:bg-red-600 hover:text-white transition-colors duration-200 font-medium text-sm rounded-full p-2">
-          <GrClose/>
-        </button>
+      </button>
+      <button onClick={() => submit(false)} className="text-red-500 uppercase border-2 border-solid border-red-600 hover:bg-red-600 hover:text-white transition-colors duration-200 font-medium text-sm rounded-full p-2">
+        <GrClose />
+      </button>
     </div>
-    </div>
+  </div>
 }
 
 function Noreq() {

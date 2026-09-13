@@ -59,10 +59,10 @@ export default function ChatBox({ chatid }) {
     useEffect(() => {
         // Get username from localStorage
         if (typeof window !== 'undefined') {
-            const user = localStorage.getItem("username");
-            setUsername(user || "");
+            const username = localStorage.getItem("username");
+            setUsername(username || "");
             
-            if (!user) {
+            if (!username) {
                 setError("Username not found");
                 return;
             }
@@ -86,7 +86,7 @@ const socket = io(BACKEND_URL, {
                 setConnectionStatus("connected");
                 
                 // Join the chat room
-                socket.emit("join-chat", { chatId: chatid, username: user });
+                socket.emit("join-chat", { chatId: chatid, username: username });
             });
 
             socket.on("connect_error", (error) => {
@@ -103,10 +103,16 @@ const socket = io(BACKEND_URL, {
             socket.on("receive-message", (data) => {
                 console.log("Received message:", data);
                 
+                // Immediately clear typing indicator if a message was received
+                if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                }
+                setTypingUser(null);
+
                 // Add the message to state
                 setMessages(prev => [...prev, {
                     content: data.message,
-                    is_sender: data.sender === user,
+                    is_sender: data.sender === username,
                     SENDER: data.sender,
                     CHAT_ID: data.chatId
                 }]);
@@ -119,7 +125,7 @@ const socket = io(BACKEND_URL, {
                 const { username: typingUsername, chatId } = data;
                 
                 // Only show if it's this chat and not the current user
-                if (chatId === chatid && typingUsername !== user) {
+                if (chatId === chatid && typingUsername !== username) {
                     setTypingUser(typingUsername);
                     
                     // Clear after 2 seconds
@@ -132,11 +138,23 @@ const socket = io(BACKEND_URL, {
                 }
             });
 
+            // Listen for stop-typing indicator
+            socket.on("user-stop-typing", (data) => {
+                const { chatId } = data;
+                if (chatId === chatid) {
+                    if (typingTimeoutRef.current) {
+                        clearTimeout(typingTimeoutRef.current);
+                    }
+                    setTypingUser(null);
+                }
+            });
+
             // Cleanup on unmount
             return () => {
                 console.log("Cleaning up socket connection");
                 socket.off("receive-message");
                 socket.off("user-typing");
+                socket.off("user-stop-typing");
                 if (typingTimeoutRef.current) {
                     clearTimeout(typingTimeoutRef.current);
                 }
@@ -149,9 +167,21 @@ const socket = io(BACKEND_URL, {
     }, [chatid, fetchInitialMessages, scrollToBottom]);
 
     // Handle typing events with debouncing
-    const handleTyping = () => {
+    const handleTyping = (e) => {
         if (!socketRef.current?.connected || !username) return;
         
+        const val = e?.target?.value;
+        if (!val || val.trim() === "") {
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+            }
+            socketRef.current.emit("stop-typing", {
+                chatId: chatid,
+                username: username
+            });
+            return;
+        }
+
         // Clear existing timeout
         if (debounceTimeout.current) {
             clearTimeout(debounceTimeout.current);
@@ -163,10 +193,15 @@ const socket = io(BACKEND_URL, {
             username: username
         });
         
-        // Debounce to avoid sending too many events
+        // Debounce to stop typing after 1.5s of no keypress
         debounceTimeout.current = setTimeout(() => {
-            // Typing stopped
-        }, 1000);
+            if (socketRef.current?.connected) {
+                socketRef.current.emit("stop-typing", {
+                    chatId: chatid,
+                    username: username
+                });
+            }
+        }, 1500);
     };
 
     // Send message via Socket.IO
@@ -206,6 +241,16 @@ const socket = io(BACKEND_URL, {
                     message: messageText,
                     sender: username
                 });
+
+                // Immediately stop typing indicator for other users
+                socketRef.current.emit("stop-typing", {
+                    chatId: chatid,
+                    username: username
+                });
+
+                if (debounceTimeout.current) {
+                    clearTimeout(debounceTimeout.current);
+                }
 
                 // Clear typing indicator
                 setTypingUser(null);

@@ -7,6 +7,7 @@ import axios from "axios";
 import AnimatedLiquidBackground from "./AnimatedLiquidBackground";
 import CTAButton from "./CTAButton";
 import logo from "public/image/logo.png";
+import { apiUrl } from "@/lib/api";
 
 export default function Hero() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function Hero() {
     const password = localStorage.getItem("password");
     if (username && password) {
       axios
-        .get(`/login/api?username=${username}&password=${password}`)
+        .post(apiUrl("/api/login"), { username, password })
         .then((response) => {
           if (response.data.success) {
             router.push("/chat");

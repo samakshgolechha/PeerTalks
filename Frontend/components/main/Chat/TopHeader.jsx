@@ -4,6 +4,7 @@ import ProfileLink from "@/components/utils/ProfileLink";
 import axios from "axios";
 import { useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
+import { apiUrl } from "@/lib/api";
 
 export default function TopHeader({chatid}) {
   const [user, setUser] = useState({});
@@ -44,7 +45,7 @@ export default function TopHeader({chatid}) {
   // Fetch user status
   const fetchUserStatus = useCallback(async (username) => {
     try {
-      const response = await fetch(`/chat/api/user-status/${username}`);
+      const response = await fetch(apiUrl(`/api/user-status/${username}`));
       const data = await response.json();
       
       console.log(`Fetched status for ${username}:`, data);
@@ -61,7 +62,7 @@ export default function TopHeader({chatid}) {
     
     // Fetch user details
     axios
-      .get(`/chat/api/chatuser?username=${username}&chatid=${chatid}`)
+      .get(apiUrl(`/api/chat/chatuser?username=${username}&chatid=${chatid}`))
       .then(function (response) {
         const userData = response.data;
         setUser(userData);
